@@ -1,3 +1,5 @@
 /target
 *.sqlite*
 input/
+brainz_to_sqlite
+*.zip
