@@ -91,7 +91,7 @@ fn process_release_groups(
         }
     }
 
-    if batch.len() > 0 {
+    if !batch.is_empty() {
         insert_batch(&batch, conn.transaction().unwrap());
         inserted += batch.len();
         batch.clear();
@@ -109,7 +109,7 @@ fn process_release_groups(
     Ok(())
 }
 
-pub fn insert_batch(batch: &Vec<ReleaseGroup>, tx: Transaction) {
+pub fn insert_batch(batch: &[ReleaseGroup], tx: Transaction) {
     for release_group in batch.iter() {
         let data = serde_json::to_string(&release_group).unwrap();
         tx.execute(
