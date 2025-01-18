@@ -7,6 +7,8 @@ pub struct ReleaseGroup {
     pub title: String,
     #[serde(default, alias = "primary-type-id")]
     pub primary_type_id: Option<String>,
+    #[serde(default, alias = "primary-type")]
+    pub primary_type: Option<String>,
     #[serde(default, alias = "first-release-date")]
     pub first_release_date: Option<String>,
     #[serde(default, alias = "artist-credit")]
@@ -34,3 +36,4 @@ impl ReleaseGroup {
             .join("; ")
     }
 }
+
