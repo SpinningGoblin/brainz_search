@@ -1,6 +1,6 @@
 extern crate core;
 
-use crate::cli::{Cli, Commands};
+use crate::cli::{ArtistFilter, Cli, Commands};
 use crate::entities::ReleaseGroup;
 use clap::Parser;
 use rusqlite::{params, Connection, Transaction};
@@ -32,12 +32,17 @@ fn main() -> io::Result<()> {
 
     match &args.command {
         Commands::ReleaseGroup(args) => {
-            process_release_groups(file, conn, args.release_group_types())
-        },
+            process_release_groups(file, conn, args.release_group_types(), args.artist_filter())
+        }
     }
 }
 
-fn process_release_groups(file: File, mut conn: Connection, release_group_types: Vec<String>) -> io::Result<()> {
+fn process_release_groups(
+    file: File,
+    mut conn: Connection,
+    release_group_types: Vec<String>,
+    artist_filter: ArtistFilter,
+) -> io::Result<()> {
     let mut count = 0;
     let mut inserted = 0;
 
@@ -52,8 +57,16 @@ fn process_release_groups(file: File, mut conn: Connection, release_group_types:
         count += 1;
         let parse_result = serde_json::from_str::<ReleaseGroup>(&line?);
 
+        if count % 50_000 == 0 {
+            println!("Processed {count} lines");
+        }
+
         match parse_result {
             Ok(release_group) => {
+                if artist_filter.should_skip(&release_group.artist_content()) {
+                    continue;
+                }
+
                 if let Some(primary_type) = &release_group.primary_type {
                     if !release_group_types.contains(primary_type) {
                         continue;
@@ -63,7 +76,6 @@ fn process_release_groups(file: File, mut conn: Connection, release_group_types:
                 if count % 100_000 == 0 {
                     println!("count {count} {}", &release_group.title);
                 }
-
 
                 batch.push(release_group);
             }
@@ -76,10 +88,6 @@ fn process_release_groups(file: File, mut conn: Connection, release_group_types:
             insert_batch(&batch, conn.transaction().unwrap());
             inserted += batch.len();
             batch.clear();
-        }
-
-        if count % 10_000 == 0 {
-            println!("Processed {count} lines")
         }
     }
 
@@ -101,7 +109,7 @@ fn process_release_groups(file: File, mut conn: Connection, release_group_types:
     Ok(())
 }
 
-pub fn insert_batch(batch: &Vec<ReleaseGroup>, tx: Transaction)  {
+pub fn insert_batch(batch: &Vec<ReleaseGroup>, tx: Transaction) {
     for release_group in batch.iter() {
         let data = serde_json::to_string(&release_group).unwrap();
         tx.execute(

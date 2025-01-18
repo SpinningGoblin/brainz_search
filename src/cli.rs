@@ -28,14 +28,44 @@ impl Commands {
 
 #[derive(Args, Debug)]
 pub struct ReleaseGroupArgs {
-    #[clap(long, default_value = "Album,EP", short='t')]
+    #[clap(long, default_value = "Album,EP", short = 't')]
     pub types: String,
-    #[clap(long, default_value = "trigram case_sensitive 0 remove_diacritics 1", short='k')]
+    #[clap(
+        long,
+        default_value = "trigram case_sensitive 0 remove_diacritics 1",
+        short = 'k'
+    )]
     pub tokenizer: String,
+    #[clap(long, short = 'a')]
+    pub artists: Option<String>,
 }
 
 impl ReleaseGroupArgs {
     pub fn release_group_types(&self) -> Vec<String> {
         self.types.split(",").map(|s| s.to_string()).collect()
+    }
+
+    pub fn artist_filter(&self) -> ArtistFilter {
+        let artists = self
+            .artists
+            .clone()
+            .map(|s| s.split(',').map(|s| s.to_string()).collect::<Vec<_>>())
+            .unwrap_or_default();
+
+        ArtistFilter { artists }
+    }
+}
+
+pub struct ArtistFilter {
+    pub artists: Vec<String>,
+}
+
+impl ArtistFilter {
+    pub fn should_skip(&self, artist: &str) -> bool {
+        if self.artists.is_empty() {
+            return false;
+        }
+
+        !self.artists.contains(&artist.to_string())
     }
 }
